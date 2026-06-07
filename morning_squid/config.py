@@ -63,6 +63,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     # Cap how much vertical space an image may use (any CSS length). Keeps tall
     # images from swallowing whole pages; aspect ratio is preserved.
     "image_max_height": "9cm",
+    # Downscale images so they never exceed this resolution at their largest
+    # on-page size. Smaller files, no visible quality loss on e-ink. Set to 0 or
+    # remove to keep images at their original resolution.
+    "image_max_ppi": 300,
     # Feeds live in a separate CSV (see feeds.py). Relative paths are resolved
     # against the config directory.
     "feeds_file": "feeds.csv",

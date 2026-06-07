@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -47,6 +48,69 @@ def recipe_source() -> Path:
     return Path(__file__).with_name("recipe.py")
 
 
+# Conversion factors to inches. Used to turn page geometry / CSS lengths into a
+# pixel cap so images never exceed a target PPI at their largest display size.
+_UNIT_TO_INCH = {
+    "inch": 1.0, "in": 1.0,
+    "millimeter": 1 / 25.4, "mm": 1 / 25.4,
+    "centimeter": 1 / 2.54, "cm": 1 / 2.54,
+    "point": 1 / 72, "pt": 1 / 72,
+    "pica": 1 / 6,
+    "devicepixel": 1 / 96, "px": 1 / 96,
+}
+
+
+def _css_length_inches(value: Any) -> float | None:
+    """Parse a CSS length such as ``9cm`` / ``90mm`` / ``3.5in`` into inches.
+
+    Returns ``None`` for relative/unknown units (e.g. ``%``) we can't resolve.
+    """
+    if value is None:
+        return None
+    m = re.match(r"^\s*([0-9.]+)\s*([a-z%]*)\s*$", str(value).lower())
+    if not m:
+        return None
+    factor = _UNIT_TO_INCH.get(m.group(2) or "px")
+    return float(m.group(1)) * factor if factor else None
+
+
+def _content_width_inches(pdf_cfg: dict[str, Any]) -> float | None:
+    """Width of the text column in inches: page width (in ``unit``) minus the
+    left/right margins (Calibre PDF margins are in points)."""
+    size = pdf_cfg.get("custom_size")
+    factor = _UNIT_TO_INCH.get(pdf_cfg.get("unit", "inch"))
+    if not size or not factor:
+        return None
+    try:
+        page = float(str(size).lower().split("x")[0]) * factor
+    except ValueError:
+        return None
+    margins = float(pdf_cfg.get("margin_left", 0) or 0) + \
+        float(pdf_cfg.get("margin_right", 0) or 0)
+    return page - margins / 72.0
+
+
+def image_scale_box(cfg: dict[str, Any]) -> list[int] | None:
+    """Pixel ``[width, height]`` cap so images stay at/under ``image_max_ppi``.
+
+    Bounds each dimension by its largest on-page display size (column width and
+    ``image_max_height``); Calibre downscales larger images, preserving aspect
+    ratio. Returns ``None`` when capping is disabled or geometry is unknown.
+    """
+    ppi = cfg.get("image_max_ppi")
+    if not ppi:
+        return None
+    h_in = _css_length_inches(cfg.get("image_max_height"))
+    w_in = _content_width_inches(cfg.get("pdf", {}))
+    # If only one dimension is known, use it for both so resolution is still
+    # bounded rather than silently disabled.
+    w_in = w_in or h_in
+    h_in = h_in or w_in
+    if not w_in or not h_in:
+        return None
+    return [round(w_in * ppi), round(h_in * ppi)]
+
+
 def build_recipe_payload(cfg: dict[str, Any], feeds: list[dict[str, str]], *,
                          mark_seen: bool, state_path: Path,
                          oldest_article: int | None = None) -> dict[str, Any]:
@@ -61,6 +125,7 @@ def build_recipe_payload(cfg: dict[str, Any], feeds: list[dict[str, str]], *,
         "max_articles_per_feed": cfg.get("max_articles_per_feed", 100),
         "nav_links": cfg.get("nav_links", True),
         "image_max_height": cfg.get("image_max_height", "9cm"),
+        "scale_news_images": image_scale_box(cfg),
         "mark_seen": mark_seen,
     }
 

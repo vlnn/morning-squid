@@ -48,6 +48,9 @@ DEFAULTS = {
     'mark_seen': True,
     'nav_links': True,
     'image_max_height': '9cm',
+    # [width, height] pixel cap (computed from image_max_ppi), or None to keep
+    # images at their original resolution.
+    'scale_news_images': None,
 }
 
 STATS_CSS = '''
@@ -225,6 +228,11 @@ class DailyFeeds(BasicNewsRecipe):
         f'        figure {{ margin: 0.6em 0; }}\n'
     )
     feeds = [tuple(f) for f in CONFIG['feeds']]
+    if CONFIG.get('scale_news_images'):
+        # Downscale (and re-encode) oversized images so they stay at/under the
+        # configured PPI; aspect ratio preserved.
+        scale_news_images = tuple(CONFIG['scale_news_images'])
+        compress_news_images = True
 
     def parse_feeds(self):
         feeds = drop_seen(super().parse_feeds(), load_seen())

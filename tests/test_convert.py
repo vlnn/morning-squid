@@ -16,6 +16,36 @@ def test_build_recipe_payload():
     assert payload["feeds"][0] == ["yogthos", "https://yogthos.net/feed.xml"]
     assert payload["nav_links"] is True
     assert payload["image_max_height"] == "9cm"
+    # Defaults cap images at 300 ppi: column width and 9cm height, in pixels.
+    assert payload["scale_news_images"] == [1663, 1063]
+
+
+def test_css_length_inches():
+    assert convert._css_length_inches("9cm") == 9 * convert._UNIT_TO_INCH["cm"]
+    assert convert._css_length_inches("90mm") == 90 * convert._UNIT_TO_INCH["mm"]
+    assert convert._css_length_inches("1in") == 1.0
+    assert convert._css_length_inches("96px") == 1.0
+    assert convert._css_length_inches("50%") is None
+    assert convert._css_length_inches(None) is None
+
+
+def test_image_scale_box_respects_ppi_and_geometry():
+    cfg = {
+        "image_max_height": "9cm",
+        "image_max_ppi": 300,
+        "pdf": {"custom_size": "157x210", "unit": "millimeter",
+                "margin_left": 28, "margin_right": 18},
+    }
+    # width: (157mm - (28+18)pt) in inches * 300; height: 9cm in inches * 300.
+    assert convert.image_scale_box(cfg) == [1663, 1063]
+    # Raising the PPI raises the pixel cap proportionally.
+    assert convert.image_scale_box({**cfg, "image_max_ppi": 600}) == [3325, 2126]
+
+
+def test_image_scale_box_disabled_without_ppi():
+    cfg = {"image_max_height": "9cm", "pdf": config.DEFAULT_PDF}
+    assert convert.image_scale_box({**cfg, "image_max_ppi": 0}) is None
+    assert convert.image_scale_box(cfg) is None
 
 
 def test_build_command_maps_pdf_flags():
