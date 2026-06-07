@@ -5,7 +5,9 @@ Pull your RSS/Atom feeds into a single, daily, e-ink-friendly PDF.
 `morning-squid` wraps [Calibre](https://calibre-ebook.com/)'s news engine: it
 fetches the feeds you configure, drops articles you've already seen, merges
 everything into one chronological "issue", prepends a stats page (article count,
-sources, reading time) and renders a PDF tuned for e-readers.
+sources, reading time) and renders a PDF tuned for e-readers. Each article gets
+a small clickable `‹ Prev · Contents · Next ›` bar at its top and bottom so you
+can hop between articles (or skip one) on the device.
 
 It started life as a single Calibre recipe plus a `pull.sh` one-liner. This is
 the same idea, turned into a proper configurable CLI (and an optional systemd
@@ -88,6 +90,7 @@ output_dir = "~/squid"
 wpm = 200                  # words-per-minute for reading-time estimates
 oldest_article = 1000      # max age (days) of articles to consider
 max_articles_per_feed = 100
+nav_links = true           # clickable Prev/Contents/Next bar per article
 feeds_file = "feeds.csv"   # relative paths resolve against the config dir
 
 [pdf]

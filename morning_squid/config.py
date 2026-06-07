@@ -54,6 +54,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "wpm": 200,
     "oldest_article": 1000,
     "max_articles_per_feed": 100,
+    # Add clickable Prev/Contents/Next nav at each article's top and bottom.
+    "nav_links": True,
     # Feeds live in a separate CSV (see feeds.py). Relative paths are resolved
     # against the config directory.
     "feeds_file": "feeds.csv",

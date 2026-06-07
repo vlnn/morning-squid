@@ -1,5 +1,6 @@
 import datetime as dt
 import types
+import xml.etree.ElementTree as ET
 
 from morning_squid import recipe
 
@@ -60,3 +61,62 @@ def test_stats_page_contains_key_fields():
     assert "My Title" in html
     assert "Reading time" in html
     assert "400 words" in html
+
+
+def test_article_page_regex():
+    assert recipe.ARTICLE_PAGE.match("feed_0/article_2/index.html")
+    assert recipe.ARTICLE_PAGE.match("feed_12/article_0/index.html")
+    # Not an article entry page:
+    assert not recipe.ARTICLE_PAGE.match("feed_0/index.html")
+    assert not recipe.ARTICLE_PAGE.match("feed_0/article_2/index1.html")
+    assert not recipe.ARTICLE_PAGE.match("index.html")
+
+
+def test_relative_href():
+    base = "feed_0/article_3/index.html"
+    assert recipe.relative_href(base, "feed_0/article_4/index.html") == "../article_4/index.html"
+    assert recipe.relative_href(base, "index.html") == "../../index.html"
+
+
+def test_nav_block_first_article_has_no_prev():
+    html = recipe.nav_block_html(
+        prev=None,
+        nxt=("feed_0/article_1/index.html", "Second"),
+        contents_href="index.html",
+        index=1, total=3,
+        from_href="feed_0/article_0/index.html",
+    )
+    ET.fromstring(html)  # well-formed XML
+    assert recipe.XHTML_NS in html
+    assert "Article 1 of 3" in html
+    assert ">·<" in html  # muted prev placeholder
+    assert "Second" in html
+    assert 'href="../article_1/index.html"' in html
+    assert 'href="../../index.html"' in html  # Contents link
+
+
+def test_nav_block_last_article_has_no_next():
+    html = recipe.nav_block_html(
+        prev=("feed_0/article_1/index.html", "Second"),
+        nxt=None,
+        contents_href="index.html",
+        index=3, total=3,
+        from_href="feed_0/article_2/index.html",
+    )
+    ET.fromstring(html)
+    assert "Article 3 of 3" in html
+    assert "‹ Second" in html
+    assert html.count("·") >= 1  # next placeholder dot
+
+
+def test_nav_block_truncates_long_titles():
+    long_title = "x" * 80
+    html = recipe.nav_block_html(
+        prev=None,
+        nxt=("feed_0/article_1/index.html", long_title),
+        contents_href="index.html",
+        index=1, total=2,
+        from_href="feed_0/article_0/index.html",
+    )
+    assert long_title not in html
+    assert "…" in html
