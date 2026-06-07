@@ -56,6 +56,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "max_articles_per_feed": 100,
     # Add clickable Prev/Contents/Next nav at each article's top and bottom.
     "nav_links": True,
+    # Cap how much vertical space an image may use (any CSS length). Keeps tall
+    # images from swallowing whole pages; aspect ratio is preserved.
+    "image_max_height": "9cm",
     # Feeds live in a separate CSV (see feeds.py). Relative paths are resolved
     # against the config directory.
     "feeds_file": "feeds.csv",

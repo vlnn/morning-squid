@@ -91,6 +91,7 @@ wpm = 200                  # words-per-minute for reading-time estimates
 oldest_article = 1000      # max age (days) of articles to consider
 max_articles_per_feed = 100
 nav_links = true           # clickable Prev/Contents/Next bar per article
+image_max_height = "9cm"   # cap image height so pictures don't swallow pages
 feeds_file = "feeds.csv"   # relative paths resolve against the config dir
 
 [pdf]

@@ -14,6 +14,8 @@ def test_build_recipe_payload():
     assert payload["oldest_article"] == 7
     assert payload["state_path"] == "/tmp/seen.json"
     assert payload["feeds"][0] == ["yogthos", "https://yogthos.net/feed.xml"]
+    assert payload["nav_links"] is True
+    assert payload["image_max_height"] == "9cm"
 
 
 def test_build_command_maps_pdf_flags():

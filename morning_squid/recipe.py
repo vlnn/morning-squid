@@ -47,6 +47,7 @@ DEFAULTS = {
     'max_articles_per_feed': 100,
     'mark_seen': True,
     'nav_links': True,
+    'image_max_height': '9cm',
 }
 
 STATS_CSS = '''
@@ -214,7 +215,15 @@ class DailyFeeds(BasicNewsRecipe):
         .ms-nav-prev { text-align: left; }
         .ms-nav-mid { text-align: center; white-space: nowrap; }
         .ms-nav-next { text-align: right; }
-    '''
+    ''' + (
+        # Keep images from dominating the page: fit the text column and cap the
+        # height so tall images don't swallow whole pages. Aspect ratio is
+        # preserved (only one of width/height binds). Centered with a little air.
+        f'        img {{ max-width: 100%; max-height: {CONFIG["image_max_height"]};'
+        f' width: auto; height: auto; display: block;'
+        f' margin: 0.6em auto; }}\n'
+        f'        figure {{ margin: 0.6em 0; }}\n'
+    )
     feeds = [tuple(f) for f in CONFIG['feeds']]
 
     def parse_feeds(self):

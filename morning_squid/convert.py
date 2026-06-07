@@ -48,6 +48,7 @@ def build_recipe_payload(cfg: dict[str, Any], feeds: list[dict[str, str]], *,
         else cfg.get("oldest_article", 1000),
         "max_articles_per_feed": cfg.get("max_articles_per_feed", 100),
         "nav_links": cfg.get("nav_links", True),
+        "image_max_height": cfg.get("image_max_height", "9cm"),
         "mark_seen": mark_seen,
     }
 
