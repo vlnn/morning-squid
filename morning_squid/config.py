@@ -46,6 +46,10 @@ DEFAULT_PDF: dict[str, Any] = {
     "margin_bottom": 14,
     "serif_family": "Vollkorn",
     "default_font_size": 15,
+    # Tappable article list in the PDF outline/bookmarks (reach it from any page).
+    "add_toc": True,
+    # Running footer on every page: current article title + page number.
+    "footer": True,
 }
 
 DEFAULT_CONFIG: dict[str, Any] = {

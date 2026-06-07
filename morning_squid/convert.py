@@ -26,6 +26,18 @@ PDF_FLAGS = {
     "default_font_size": "--pdf-default-font-size",
 }
 
+# Running footer on every physical page: current article (_SECTION_) on the left,
+# page number on the right. _SECTION_ / _PAGENUM_ are substituted by Calibre.
+# (PDF footers are page furniture, so this is for orientation, not tap targets --
+#  use the PDF outline/bookmarks, enabled by add_toc, to jump between articles.)
+FOOTER_TEMPLATE = (
+    '<footer style="font-family:sans-serif; font-size:8px; color:#666;'
+    ' width:100%; padding-top:2px; border-top:1px solid #ccc;">'
+    '<span>_SECTION_</span>'
+    '<span style="float:right">_PAGENUM_</span>'
+    '</footer>'
+)
+
 
 def have_calibre() -> bool:
     return shutil.which(EBOOK_CONVERT) is not None
@@ -60,6 +72,13 @@ def build_command(recipe_file: Path, output: Path, pdf_cfg: dict[str, Any]) -> l
         if value is None or value == "":
             continue
         cmd.append(f"{flag}={value}")
+    # Boolean toggles.
+    if pdf_cfg.get("add_toc"):
+        # Tappable table of contents reachable from any page via the reader's
+        # outline/bookmarks button.
+        cmd.append("--pdf-add-toc")
+    if pdf_cfg.get("footer"):
+        cmd.append(f"--pdf-footer-template={FOOTER_TEMPLATE}")
     for extra in pdf_cfg.get("extra_args", []):
         cmd.append(str(extra))
     return cmd

@@ -104,12 +104,21 @@ margin_top = 14
 margin_bottom = 14
 serif_family = "Vollkorn"
 default_font_size = 15
+add_toc = true             # tappable article list in the PDF outline/bookmarks
+footer = true              # running footer: current article title + page number
 # extra_args = ["--some-other-ebook-convert-flag"]
 ```
 
 Everything under `[pdf]` maps directly onto `ebook-convert` flags, so you can
 retune the output for a different device. Anything in `extra_args` is passed
 through verbatim.
+
+`add_toc` puts every article into the PDF outline, so you can jump to any
+article from any page using your reader's table-of-contents/bookmarks button —
+the closest a fixed-layout PDF gets to "navigation on every page" (the footer
+itself is page furniture and can't hold tappable links). `footer` adds a small
+running line at the bottom of every page showing which article you're in and the
+page number.
 
 ### Feeds
 
