@@ -46,6 +46,10 @@ DEFAULT_PDF: dict[str, Any] = {
     "margin_bottom": 14,
     "serif_family": "Vollkorn",
     "default_font_size": 15,
+    # Tappable article list in the PDF outline/bookmarks (reach it from any page).
+    "add_toc": True,
+    # Running footer on every page: current article title + page number.
+    "footer": True,
 }
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -56,6 +60,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "max_articles_per_feed": 100,
     # Add clickable Prev/Contents/Next nav at each article's top and bottom.
     "nav_links": True,
+    # Cap how much vertical space an image may use (any CSS length). Keeps tall
+    # images from swallowing whole pages; aspect ratio is preserved.
+    "image_max_height": "9cm",
+    # Downscale images so they never exceed this resolution at their largest
+    # on-page size. Smaller files, no visible quality loss on e-ink. Set to 0 or
+    # remove to keep images at their original resolution.
+    "image_max_ppi": 300,
     # Feeds live in a separate CSV (see feeds.py). Relative paths are resolved
     # against the config directory.
     "feeds_file": "feeds.csv",

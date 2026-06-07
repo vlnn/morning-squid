@@ -109,6 +109,13 @@ def test_nav_block_last_article_has_no_next():
     assert html.count("·") >= 1  # next placeholder dot
 
 
+def test_extra_css_constrains_images():
+    css = recipe.DailyFeeds.extra_css
+    assert "img" in css
+    assert "max-width: 100%" in css
+    assert f"max-height: {recipe.CONFIG['image_max_height']}" in css
+
+
 def test_nav_block_truncates_long_titles():
     long_title = "x" * 80
     html = recipe.nav_block_html(

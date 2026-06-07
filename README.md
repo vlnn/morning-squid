@@ -91,6 +91,8 @@ wpm = 200                  # words-per-minute for reading-time estimates
 oldest_article = 1000      # max age (days) of articles to consider
 max_articles_per_feed = 100
 nav_links = true           # clickable Prev/Contents/Next bar per article
+image_max_height = "9cm"   # cap image height so pictures don't swallow pages
+image_max_ppi = 300        # downscale images to <=300 ppi (0 = keep originals)
 feeds_file = "feeds.csv"   # relative paths resolve against the config dir
 
 [pdf]
@@ -103,12 +105,21 @@ margin_top = 14
 margin_bottom = 14
 serif_family = "Vollkorn"
 default_font_size = 15
+add_toc = true             # tappable article list in the PDF outline/bookmarks
+footer = true              # running footer: current article title + page number
 # extra_args = ["--some-other-ebook-convert-flag"]
 ```
 
 Everything under `[pdf]` maps directly onto `ebook-convert` flags, so you can
 retune the output for a different device. Anything in `extra_args` is passed
 through verbatim.
+
+`add_toc` puts every article into the PDF outline, so you can jump to any
+article from any page using your reader's table-of-contents/bookmarks button —
+the closest a fixed-layout PDF gets to "navigation on every page" (the footer
+itself is page furniture and can't hold tappable links). `footer` adds a small
+running line at the bottom of every page showing which article you're in and the
+page number.
 
 ### Feeds
 

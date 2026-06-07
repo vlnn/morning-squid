@@ -47,6 +47,10 @@ DEFAULTS = {
     'max_articles_per_feed': 100,
     'mark_seen': True,
     'nav_links': True,
+    'image_max_height': '9cm',
+    # [width, height] pixel cap (computed from image_max_ppi), or None to keep
+    # images at their original resolution.
+    'scale_news_images': None,
 }
 
 STATS_CSS = '''
@@ -214,8 +218,21 @@ class DailyFeeds(BasicNewsRecipe):
         .ms-nav-prev { text-align: left; }
         .ms-nav-mid { text-align: center; white-space: nowrap; }
         .ms-nav-next { text-align: right; }
-    '''
+    ''' + (
+        # Keep images from dominating the page: fit the text column and cap the
+        # height so tall images don't swallow whole pages. Aspect ratio is
+        # preserved (only one of width/height binds). Centered with a little air.
+        f'        img {{ max-width: 100%; max-height: {CONFIG["image_max_height"]};'
+        f' width: auto; height: auto; display: block;'
+        f' margin: 0.6em auto; }}\n'
+        f'        figure {{ margin: 0.6em 0; }}\n'
+    )
     feeds = [tuple(f) for f in CONFIG['feeds']]
+    if CONFIG.get('scale_news_images'):
+        # Downscale (and re-encode) oversized images so they stay at/under the
+        # configured PPI; aspect ratio preserved.
+        scale_news_images = tuple(CONFIG['scale_news_images'])
+        compress_news_images = True
 
     def parse_feeds(self):
         feeds = drop_seen(super().parse_feeds(), load_seen())
