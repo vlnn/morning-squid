@@ -47,6 +47,7 @@ def build_recipe_payload(cfg: dict[str, Any], feeds: list[dict[str, str]], *,
         "oldest_article": oldest_article if oldest_article is not None
         else cfg.get("oldest_article", 1000),
         "max_articles_per_feed": cfg.get("max_articles_per_feed", 100),
+        "nav_links": cfg.get("nav_links", True),
         "mark_seen": mark_seen,
     }
 

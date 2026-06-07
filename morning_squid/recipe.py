@@ -15,8 +15,10 @@ can be unit-tested without Calibre installed.
 
 import json
 import os
+import posixpath
 import re
 from collections import Counter
+from html import escape
 from pathlib import Path
 
 try:  # Calibre is only present when run by ebook-convert; tests import helpers.
@@ -31,6 +33,10 @@ except ImportError:  # pragma: no cover
 
 
 INDEX_PAGE = re.compile(r'^feed_\d+/index\.html$')
+ARTICLE_PAGE = re.compile(r'^feed_\d+/article_\d+/index\.html$')
+FRONT_PAGE = 'index.html'
+XHTML_NS = 'http://www.w3.org/1999/xhtml'
+NAV_TITLE_MAX = 40
 
 DEFAULTS = {
     'title': 'Daily Feeds',
@@ -40,6 +46,7 @@ DEFAULTS = {
     'oldest_article': 1000,
     'max_articles_per_feed': 100,
     'mark_seen': True,
+    'nav_links': True,
 }
 
 STATS_CSS = '''
@@ -148,6 +155,47 @@ def article_header(soup, article):
     return header
 
 
+def relative_href(from_href, to_href):
+    """Link from one OEB document to another (posix, relative to from's dir)."""
+    return posixpath.relpath(to_href, posixpath.dirname(from_href))
+
+
+def _truncate(text, limit=NAV_TITLE_MAX):
+    text = text.strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + '…'
+
+
+def _nav_cell(side, target, from_href):
+    """One side cell: a link to ``target`` (an (href, title) pair) or a muted dot."""
+    if not target:
+        return f'<td class="ms-nav-{side}">·</td>'
+    href, title = target
+    rel = escape(relative_href(from_href, href), quote=True)
+    label = escape(_truncate(title))
+    text = f'‹ {label}' if side == 'prev' else f'{label} ›'
+    return f'<td class="ms-nav-{side}"><a href="{rel}">{text}</a></td>'
+
+
+def nav_block_html(*, prev, nxt, contents_href, index, total, from_href):
+    """Build the XHTML for one Prev · Contents · Next navigation block.
+
+    ``prev``/``nxt`` are ``(href, title)`` tuples or ``None``. Returns a string
+    in the XHTML namespace so Calibre renders it as part of the article.
+    """
+    contents_rel = escape(relative_href(from_href, contents_href), quote=True)
+    center = (
+        f'<a href="{contents_rel}">Contents</a>'
+        f' · Article {index} of {total}'
+    )
+    return (
+        f'<table xmlns="{XHTML_NS}" class="ms-nav"><tr>'
+        + _nav_cell('prev', prev, from_href)
+        + f'<td class="ms-nav-mid">{center}</td>'
+        + _nav_cell('next', nxt, from_href)
+        + '</tr></table>'
+    )
+
+
 class DailyFeeds(BasicNewsRecipe):
     title = CONFIG['title']
     oldest_article = CONFIG['oldest_article']
@@ -158,6 +206,14 @@ class DailyFeeds(BasicNewsRecipe):
     extra_css = '''
         .article-header h2 { margin: 0 0 0.1em 0; }
         .article-meta { font-size: 0.75em; color: #444; margin-bottom: 1em; }
+        table.ms-nav { width: 100%; border-collapse: collapse;
+            font-size: 0.7em; color: #666; margin: 1.5em 0 0.5em 0;
+            border-top: 1px solid #ccc; }
+        table.ms-nav td { padding: 0.4em 0; vertical-align: top; }
+        .ms-nav a { text-decoration: none; color: #666; }
+        .ms-nav-prev { text-align: left; }
+        .ms-nav-mid { text-align: center; white-space: nowrap; }
+        .ms-nav-next { text-align: right; }
     '''
     feeds = [tuple(f) for f in CONFIG['feeds']]
 
@@ -189,9 +245,45 @@ class DailyFeeds(BasicNewsRecipe):
             oeb.spine.remove(item)
             oeb.manifest.remove(item)
         for item in oeb.spine:
-            if item.href == 'index.html':
+            if item.href == FRONT_PAGE:
                 item.data = etree.fromstring(
                     stats_page(self.title, self.issue_stats, self.issue_words, CONFIG['wpm'])
                 )
             for nav in item.data.xpath('//*[contains(@class, "calibre_navbar")]'):
                 nav.getparent().remove(nav)
+        if CONFIG.get('nav_links', True):
+            self.insert_nav_links(oeb)
+
+    @staticmethod
+    def _item_title(item):
+        """The article title, from the inserted header h2, falling back to <title>."""
+        ns = {'x': XHTML_NS}
+        for query in ('//x:div[contains(@class, "article-header")]//x:h2', '//x:title'):
+            found = item.data.xpath(query, namespaces=ns)
+            if found and found[0].text and found[0].text.strip():
+                return found[0].text.strip()
+        return 'article'
+
+    def insert_nav_links(self, oeb):
+        """Add a Prev · Contents · Next block to the top and bottom of each article."""
+        articles = [i for i in oeb.spine if ARTICLE_PAGE.match(i.href)]
+        total = len(articles)
+        if not total:
+            return
+        titles = {item.href: self._item_title(item) for item in articles}
+        ns = {'x': XHTML_NS}
+        for idx, item in enumerate(articles, start=1):
+            prev_item = articles[idx - 2] if idx > 1 else None
+            next_item = articles[idx] if idx < total else None
+            prev = (prev_item.href, titles[prev_item.href]) if prev_item else None
+            nxt = (next_item.href, titles[next_item.href]) if next_item else None
+            bodies = item.data.xpath('//x:body', namespaces=ns) or item.data.xpath('//body')
+            if not bodies:
+                continue
+            body = bodies[0]
+            html = nav_block_html(
+                prev=prev, nxt=nxt, contents_href=FRONT_PAGE,
+                index=idx, total=total, from_href=item.href,
+            )
+            body.insert(0, etree.fromstring(html))  # top, above the header
+            body.append(etree.fromstring(html))      # bottom
