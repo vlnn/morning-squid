@@ -5,8 +5,9 @@ from morning_squid import config, convert
 
 def test_build_recipe_payload():
     cfg = config.DEFAULT_CONFIG
+    feeds = [{"name": "yogthos", "url": "https://yogthos.net/feed.xml"}]
     payload = convert.build_recipe_payload(
-        cfg, mark_seen=False, state_path=Path("/tmp/seen.json"), oldest_article=7
+        cfg, feeds, mark_seen=False, state_path=Path("/tmp/seen.json"), oldest_article=7
     )
     assert payload["title"] == "Daily Feeds"
     assert payload["mark_seen"] is False

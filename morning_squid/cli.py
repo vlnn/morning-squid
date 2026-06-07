@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import __version__, config, convert, state
+from . import __version__, config, convert, feeds as feeds_mod, state
 
 
 def _eprint(*args) -> None:
@@ -38,8 +38,12 @@ def cmd_pull(args: argparse.Namespace) -> int:
         )
         return 127
 
-    if not cfg.get("feeds"):
-        _eprint("No feeds configured. Add some with `morning-squid feeds add`.")
+    feeds = feeds_mod.load_feeds(config.feeds_path(cfg))
+    if not feeds:
+        _eprint(
+            f"No feeds in {config.feeds_path(cfg)}.\n"
+            "Add some with `morning-squid feeds add`."
+        )
         return 1
 
     today = dt.date.today().isoformat()
@@ -51,6 +55,7 @@ def cmd_pull(args: argparse.Namespace) -> int:
 
     payload = convert.build_recipe_payload(
         cfg,
+        feeds,
         mark_seen=not args.no_mark_seen,
         state_path=config.state_path(cfg),
         oldest_article=args.since,
@@ -72,39 +77,41 @@ def cmd_pull(args: argparse.Namespace) -> int:
 
 def cmd_feeds_list(args: argparse.Namespace) -> int:
     cfg = _require_config()
-    feeds = cfg.get("feeds", [])
+    path = config.feeds_path(cfg)
+    feeds = feeds_mod.load_feeds(path)
     if not feeds:
-        print("No feeds configured.")
+        print(f"No feeds in {path}.")
         return 0
     width = max(len(f["name"]) for f in feeds)
     for f in feeds:
         print(f"{f['name']:<{width}}  {f['url']}")
-    print(f"\n{len(feeds)} feed(s)")
+    print(f"\n{len(feeds)} feed(s) in {path}")
     return 0
 
 
 def cmd_feeds_add(args: argparse.Namespace) -> int:
     cfg = _require_config()
-    feeds = cfg.setdefault("feeds", [])
+    path = config.feeds_path(cfg)
+    feeds = feeds_mod.load_feeds(path)
     for f in feeds:
         if f["name"] == args.name:
             _eprint(f"A feed named {args.name!r} already exists.")
             return 1
     feeds.append({"name": args.name, "url": args.url})
-    config.save(cfg)
+    feeds_mod.save_feeds(path, feeds)
     print(f"Added {args.name} -> {args.url}")
     return 0
 
 
 def cmd_feeds_remove(args: argparse.Namespace) -> int:
     cfg = _require_config()
-    feeds = cfg.get("feeds", [])
+    path = config.feeds_path(cfg)
+    feeds = feeds_mod.load_feeds(path)
     kept = [f for f in feeds if f["name"] != args.name]
     if len(kept) == len(feeds):
         _eprint(f"No feed named {args.name!r}.")
         return 1
-    cfg["feeds"] = kept
-    config.save(cfg)
+    feeds_mod.save_feeds(path, kept)
     print(f"Removed {args.name}")
     return 0
 
@@ -144,7 +151,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     print(f"state        {sp}")
     print(f"seen         {state.count_seen(sp)} article(s)")
     print(f"output dir   {Path(cfg.get('output_dir', '~/squid')).expanduser()}")
-    print(f"feeds        {len(cfg.get('feeds', []))}")
+    fp = config.feeds_path(cfg)
+    print(f"feeds file   {fp}{'' if fp.exists() else '  (missing)'}")
+    print(f"feeds        {len(feeds_mod.load_feeds(fp))}")
     print(f"calibre      {'found' if convert.have_calibre() else 'NOT found on PATH'}")
     return 0
 

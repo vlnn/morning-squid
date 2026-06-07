@@ -27,8 +27,11 @@ Homepage = "https://github.com/vlnn/morning-squid"
 [project.scripts]
 morning-squid = "morning_squid.cli:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = ["pytest>=7"]
+
+[tool.uv]
+package = true
 
 [tool.setuptools]
 packages = ["morning_squid"]

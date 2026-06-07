@@ -12,6 +12,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from . import feeds as _feeds
+
 APP = "morning-squid"
 
 # Defaults ship with the original feed list and e-ink PDF tuning so the tool
@@ -52,8 +54,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "wpm": 200,
     "oldest_article": 1000,
     "max_articles_per_feed": 100,
+    # Feeds live in a separate CSV (see feeds.py). Relative paths are resolved
+    # against the config directory.
+    "feeds_file": "feeds.csv",
     "pdf": dict(DEFAULT_PDF),
-    "feeds": [dict(f) for f in DEFAULT_FEEDS],
 }
 
 
@@ -82,6 +86,20 @@ def state_path(cfg: dict[str, Any] | None = None) -> Path:
     if custom:
         return Path(custom).expanduser()
     return default_state_path()
+
+
+def feeds_path(cfg: dict[str, Any] | None = None) -> Path:
+    """Resolve the feeds CSV path.
+
+    Absolute or ``~``-prefixed values are used as-is; relative values are
+    resolved against the config file's directory.
+    """
+    cfg = cfg or {}
+    raw = cfg.get("feeds_file", "feeds.csv")
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        return path
+    return config_path().parent / path
 
 
 def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -116,10 +134,15 @@ def save(cfg: dict[str, Any]) -> Path:
 
 
 def init(force: bool = False) -> Path:
+    """Write a default config and seed the feeds CSV with the default feeds."""
     path = config_path()
     if path.exists() and not force:
         raise FileExistsError(path)
-    return save(DEFAULT_CONFIG)
+    save(DEFAULT_CONFIG)
+    fp = feeds_path(DEFAULT_CONFIG)
+    if force or not fp.exists():
+        _feeds.save_feeds(fp, [dict(f) for f in DEFAULT_FEEDS])
+    return path
 
 
 # --- minimal TOML emitter -------------------------------------------------
@@ -157,13 +180,13 @@ def _fmt(value: Any) -> str:
 def dumps(cfg: dict[str, Any]) -> str:
     """Serialize our config schema to TOML.
 
-    Handles scalars, one level of nested tables (e.g. ``[pdf]``) and arrays of
-    tables (``[[feeds]]``) -- everything this app's schema needs.
+    Handles scalars and one level of nested tables (e.g. ``[pdf]``) -- the only
+    shapes this app's config uses (feeds live in a separate CSV).
     """
     lines: list[str] = ["# morning-squid configuration", ""]
 
     # Scalars first.
-    scalars = {k: v for k, v in cfg.items() if not isinstance(v, (dict, list))}
+    scalars = {k: v for k, v in cfg.items() if not isinstance(v, dict)}
     for key, value in scalars.items():
         lines.append(f"{key} = {_fmt(value)}")
     if scalars:
@@ -176,14 +199,5 @@ def dumps(cfg: dict[str, Any]) -> str:
             for sub_key, sub_value in value.items():
                 lines.append(f"{sub_key} = {_fmt(sub_value)}")
             lines.append("")
-
-    # Arrays of tables.
-    for key, value in cfg.items():
-        if isinstance(value, list):
-            for item in value:
-                lines.append(f"[[{key}]]")
-                for sub_key, sub_value in item.items():
-                    lines.append(f"{sub_key} = {_fmt(sub_value)}")
-                lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"

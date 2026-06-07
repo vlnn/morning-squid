@@ -35,12 +35,13 @@ def recipe_source() -> Path:
     return Path(__file__).with_name("recipe.py")
 
 
-def build_recipe_payload(cfg: dict[str, Any], *, mark_seen: bool, state_path: Path,
+def build_recipe_payload(cfg: dict[str, Any], feeds: list[dict[str, str]], *,
+                         mark_seen: bool, state_path: Path,
                          oldest_article: int | None = None) -> dict[str, Any]:
     """Translate the user config into the JSON the recipe expects."""
     return {
         "title": cfg.get("title", "Daily Feeds"),
-        "feeds": [[f["name"], f["url"]] for f in cfg.get("feeds", [])],
+        "feeds": [[f["name"], f["url"]] for f in feeds],
         "state_path": str(state_path),
         "wpm": cfg.get("wpm", 200),
         "oldest_article": oldest_article if oldest_article is not None
