@@ -1,0 +1,11 @@
+[Unit]
+Description=Run morning-squid every morning
+Documentation=https://github.com/vlnn/morning-squid
+
+[Timer]
+# Every day at 06:00 local time; catch up if the machine was asleep.
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

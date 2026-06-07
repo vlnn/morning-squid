@@ -1,0 +1,10 @@
+[Unit]
+Description=morning-squid: render daily feeds into a PDF
+Documentation=https://github.com/vlnn/morning-squid
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Adjust the path if morning-squid is not on the unit's PATH.
+ExecStart=%h/.local/bin/morning-squid pull

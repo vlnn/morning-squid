@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "morning-squid"
+version = "0.1.0"
+description = "Pull your RSS/Atom feeds into a daily e-ink-friendly PDF (powered by Calibre)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Volodymyr Anokhin" }]
+keywords = ["rss", "atom", "calibre", "pdf", "eink", "feeds"]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Text Processing",
+]
+# No third-party runtime deps: stdlib only. Calibre's `ebook-convert` is an
+# external system requirement (it ships its own Python).
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/vlnn/morning-squid"
+
+[project.scripts]
+morning-squid = "morning_squid.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=7"]
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+packages = ["morning_squid"]
+
+[tool.setuptools.package-data]
+morning_squid = ["recipe.py"]
